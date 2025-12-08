@@ -6,6 +6,7 @@ require("dotenv").config();
 const appRoutes = require("./routes/appRoutes")
 const connectDB = require("./db/connect")
 const {requireAuth,checkUser }= require("./middleware/authMiddleware")
+const allowRoles = require("./middleware/roleMiddleware")
 
 const app = express();
 
@@ -14,6 +15,7 @@ const app = express();
 app.use(express.static("public"));
 app.use(cookieParser())
 app.use(checkUser);
+// app.use(allowRoles);
 
 app.set("view engine","ejs");
 const PORT = process.env.PORT || 5000;
@@ -33,7 +35,7 @@ app.post("/",function(req,res){
     
 })
 
-app.use("/",appRoutes);
+app.use("/POS",appRoutes);
 
 
 app.use((err, req, res, next) => {

@@ -52,3 +52,35 @@ userSchema.statics.login = async function(email, password) {
 
 const User = mongoose.model('user', userSchema);
 module.exports = User;
+
+
+
+
+
+
+
+// import mongoose from "mongoose";
+
+// const UserSchema = new mongoose.Schema(
+//   {
+//     _id: { type: String, required: true }, // UUID or generated string
+
+//     name: { type: String, required: true },
+
+//     role: {
+//       type: String,
+//       enum: ["cashier", "waiter", "manager", "admin"],
+//       required: true,
+//     },
+
+//     phone: { type: String, default: "" },
+//     passwordHash: { type: String, required: true },
+
+//     active: { type: Boolean, default: true },
+//   },
+//   { timestamps: true }
+// );
+
+// UserSchema.index({ role: 1 });
+
+// export default mongoose.model("User", UserSchema);
