@@ -1,11 +1,13 @@
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
 
 const OrderStatusSchema = new mongoose.Schema(
   {
     // _id: { type: String, required: true }, // pending, served, paid, etc.
     name: { type: String, required: true },
+    visibility: { type: Boolean, required: true, default: true }
+
   },
   { timestamps: true }
 );
 
-export default mongoose.model("OrderStatus", OrderStatusSchema);
+module.exports =  mongoose.model("OrderStatus", OrderStatusSchema);

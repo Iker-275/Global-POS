@@ -7,6 +7,7 @@ const appRoutes = require("./routes/appRoutes")
 const connectDB = require("./db/connect")
 const {requireAuth,checkUser }= require("./middleware/authMiddleware")
 const allowRoles = require("./middleware/roleMiddleware")
+const { seedStatuses }= require("./seeders/statusSeeder")
 
 const app = express();
 
@@ -47,6 +48,7 @@ app.use((err, req, res, next) => {
 app.listen(PORT,async()=>{
     await connectDB(process.env.DB_URL);
     console.log("Server started on port :"+PORT);
+   // seedStatuses();
     
 })
 

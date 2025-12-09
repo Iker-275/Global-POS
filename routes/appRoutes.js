@@ -11,6 +11,7 @@ const allowRoles = require("../middleware/roleMiddleware")
 const {createOrder,updateOrder,deleteOrder,getOrders,getOrderById,getOrdersByDate, cancelOrder} = require("../controllers/orderController")
 const {openDailyRecord,closeDailyRecord, getActiveDailyRecord,} = require("../controllers/recordController");
 const { getDailyRecordById, listDailyRecords } = require("../services/dailyRecordService");
+const { createStatus, updateStatus, deleteStatus, getAllStatuses, getStatusById, toggleVisibility } = require("../controllers/statusController")
 
 const router = Router();
 
@@ -122,6 +123,23 @@ router.get(
   getDailyRecordById
 );
 
+// Create a new order status
+router.post("/status", createStatus);
+
+// Update an order status
+router.put("/status/:id", updateStatus);
+
+// toggle visibility
+router.put("/status/toggle/:id", toggleVisibility);
+
+// Delete an order status
+router.delete("/status/:id", deleteStatus);
+
+// Get all order statuses
+router.get("/statuses", getAllStatuses);
+
+// Get a single order status by ID
+router.get("/status/:id", getStatusById);
 
 
 
