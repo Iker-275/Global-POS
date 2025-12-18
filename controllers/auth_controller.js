@@ -51,11 +51,11 @@ const signUp_get = async (req, res) => {
 
 
 const signUp_post = async (req, res) => {
-    const { email, password } = req.body;
+    const { email, password ,role} = req.body;
     // console.log(email,password);
 
     try {
-        const user = await User.create({ email, password });
+        const user = await User.create({ email, password ,role});
         const token = createToken(user._Id);
         
         

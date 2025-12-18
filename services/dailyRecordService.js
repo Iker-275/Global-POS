@@ -64,8 +64,8 @@ class DailyRecordService {
     // Push order ID
 
     record.orderIds.push(order.orderId);
-    console.log("order id " + order.orderId);
-    console.log("order total" + order.orderId);
+    // console.log("order id " + order.orderId);
+    // console.log("order total" + order.orderId);
 
 
 
@@ -73,9 +73,9 @@ class DailyRecordService {
     record.totalSales += order.orderTotal || 0;
     record.confirmedPayments += order.paidAmount || 0;
     record.pendingPayments += (order.orderTotal - order.paidAmount) || 0;
-    console.log("total sales " + record.totalSales);
-    console.log("confirmed " + record.confirmedPayments);
-    console.log("pending " + record.pendingPayments);
+    // console.log("total sales " + record.totalSales);
+    // console.log("confirmed " + record.confirmedPayments);
+    // console.log("pending " + record.pendingPayments);
 
 
     await record.save();
@@ -110,7 +110,7 @@ class DailyRecordService {
    // console.log("order"+order);
 
       totalSales += order.orderTotal || 0;
-    console.log("total sales"+totalSales);
+    //console.log("total sales"+totalSales);
 
       // If cancelled → skip from accounting
       if (order.status === "cancelled") continue;
