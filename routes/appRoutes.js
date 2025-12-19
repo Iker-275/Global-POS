@@ -136,7 +136,7 @@ router.put("/status/toggle/:id", toggleVisibility);
 router.delete("/status/:id", deleteStatus);
 
 // Get all order statuses
-router.get("/statuses", getAllStatuses);
+router.get("/status", getAllStatuses);
 
 // Get a single order status by ID
 router.get("/status/:id", getStatusById);

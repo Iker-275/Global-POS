@@ -59,7 +59,7 @@ const signUp_post = async (req, res) => {
         const token = createToken(user._Id);
         
         
-        res.status(201).json({ success: true, user });
+        res.status(201).json({ success: true,token, user });
     } catch (error) {
  
         const errors = handleErrors(error);
@@ -82,7 +82,7 @@ const login_post = async (req, res) => {
         const token = createToken(user._id);
          res.cookie('jwt', token, { httpOnly: true, maxAge: maxAge * 1000 });
 
-        res.status(200).json({ success: true, user });
+        res.status(200).json({ success: true, token,user });
         
 
     } catch (error) {
