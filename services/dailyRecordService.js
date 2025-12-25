@@ -85,49 +85,76 @@ class DailyRecordService {
   // ---------------------------------------------------------
   // Recalculate all totals for a daily record
   // ---------------------------------------------------------
-  async recalcTotalsForRecord(recordId) {
-  //  console.log("1");
+async recalcTotalsForRecord(recordId) {
+  const record = await DailyRecord.findById(recordId);
+  if (!record) throw new Error("Daily record not found.");
 
-    const record = await DailyRecord.findById(recordId);
-   // console.log(record);
-    
-    if (!record) throw new Error("Daily record not found.");
-   // console.log("2");
-   // console.log("record id: "+recordId);
-  
-    // Fetch all orders for this record
-    const orders = await Order.find({ dailyRecordId: recordId });
-   // console.log(orders);
+  const orders = await Order.find({
+    dailyRecordId: recordId,
+    status: { $ne: "cancelled" }
+  });
 
-   // console.log("3");
+  let totalSales = 0;
+  let confirmedPayments = 0;
+  let pendingPayments = 0;
 
-    let totalSales = 0;
-    let confirmedPayments = 0;
-    let pendingPayments = 0;
-   // console.log("4");
-
-    for (const order of orders) {
-   // console.log("order"+order);
-
-      totalSales += order.orderTotal || 0;
-    //console.log("total sales"+totalSales);
-
-      // If cancelled → skip from accounting
-      if (order.status === "cancelled") continue;
-
-      confirmedPayments += order.paidAmount || 0;
-      pendingPayments += (order.orderTotal - order.paidAmount) || 0;
-    }
-   // console.log("5");
-
-    record.totalSales = totalSales;
-    record.confirmedPayments = confirmedPayments;
-    record.pendingPayments = pendingPayments;
-   // console.log("6");
-
-    await record.save();
-    return record;
+  for (const order of orders) {
+    totalSales += order.orderTotal || 0;
+    confirmedPayments += order.paidAmount || 0;
+    pendingPayments += order.balance || 0;
   }
+
+  record.totalSales = totalSales;
+  record.confirmedPayments = confirmedPayments;
+  record.pendingPayments = pendingPayments;
+
+  await record.save();
+  return record;
+}
+
+  // async recalcTotalsForRecord(recordId) {
+  // //  console.log("1");
+
+  //   const record = await DailyRecord.findById(recordId);
+  //  // console.log(record);
+    
+  //   if (!record) throw new Error("Daily record not found.");
+  //  // console.log("2");
+  //  // console.log("record id: "+recordId);
+  
+  //   // Fetch all orders for this record
+  //   const orders = await Order.find({ dailyRecordId: recordId });
+  //  // console.log(orders);
+
+  //  // console.log("3");
+
+  //   let totalSales = 0;
+  //   let confirmedPayments = 0;
+  //   let pendingPayments = 0;
+  //  // console.log("4");
+
+  //   for (const order of orders) {
+  //  // console.log("order"+order);
+
+  //     totalSales += order.orderTotal || 0;
+  //   //console.log("total sales"+totalSales);
+
+  //     // If cancelled → skip from accounting
+  //     if (order.status === "cancelled") continue;
+
+  //     confirmedPayments += order.paidAmount || 0;
+  //     pendingPayments += (order.orderTotal - order.paidAmount) || 0;
+  //   }
+  //  // console.log("5");
+
+  //   record.totalSales = totalSales;
+  //   record.confirmedPayments = confirmedPayments;
+  //   record.pendingPayments = pendingPayments;
+  //  // console.log("6");
+
+  //   await record.save();
+  //   return record;
+  // }
 
   // ---------------------------------------------------------
   // Close Daily Record (finalize totals)
