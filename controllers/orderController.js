@@ -338,39 +338,10 @@ const cancelOrder = async (req, res) => {
 // GET ORDERS (pagination + filters)
 // status, date, customer, user
 // =========================================
-//  const getOrders = async (req, res) => {
-//   try {
-//     let { page = 1, limit = 20, status, date, customer } = req.query;
 
-//     page = parseInt(page);
-//     limit = parseInt(limit);
 
-//     const query = {};
 
-//     if (status) query.status = status;
-//     if (customer) query.customer = customer;
-//     if (date) query.dailyRecordDate = date;//  format (DD-MM-YYYY)
 
-//     const skip = (page - 1) * limit;
-
-//     const [orders, total] = await Promise.all([
-//       Order.find(query).skip(skip).limit(limit).sort({ createdAt: -1 }),
-//       Order.countDocuments(query)
-//     ]);
-
-//     return res.json({
-//       success: true,
-//       page,
-//       limit,
-//       totalPages: Math.ceil(total / limit),
-//       totalOrders: orders.length,
-//       data: orders
-//     });
-
-//   } catch (error) {
-//     return res.status(500).json({ success: false, message: error.message });
-//   }
-// };
 const getOrders = async (req, res) => {
   try {
     let {
@@ -381,7 +352,7 @@ const getOrders = async (req, res) => {
       date,          // DD-MM-YYYY
       startDate,     // ISO or YYYY-MM-DD
       endDate,       // ISO or YYYY-MM-DD
-      month,         // "June" or 6
+      month,         // 1 - 12 OR "June"
       year,          // 2025
       week           // 35
     } = req.query;
@@ -391,41 +362,66 @@ const getOrders = async (req, res) => {
 
     const query = {};
 
+    // ------------------------------------
+    // BASIC FILTERS
+    // ------------------------------------
     if (status) query.status = status;
     if (customer) query.customer_name = customer;
-    if (date) query.dailyRecordDate = date;
 
     // ------------------------------------
-    // DAILY RECORD FILTERING
+    // DATE FILTERS (Orders only)
     // ------------------------------------
-    let dailyRecordIds = null;
+    if (date) {
+      // DD-MM-YYYY → range for that day
+      const [day, month, year] = date.split("-");
+      const start = new Date(`${year}-${month}-${day}T00:00:00.000Z`);
+      const end = new Date(`${year}-${month}-${day}T23:59:59.999Z`);
 
-    if (month || year || week) {
-      const recordQuery = {};
-
-      if (year) recordQuery.year = Number(year);
-      if (week) recordQuery.weekOfYear = Number(week);
-
-      if (month) {
-        recordQuery.month =
-          isNaN(month) ? month : new Date(2025, month - 1).toLocaleString("en", { month: "long" });
-      }
-
-      const records = await DailyRecord.find(recordQuery).select("_id");
-
-      dailyRecordIds = records.map(r => r._id);
-      query.dailyRecordId = { $in: dailyRecordIds };
+      query.createdAt = { $gte: start, $lte: end };
     }
 
-    // ------------------------------------
-    // DATE RANGE FILTER (Orders)
-    // ------------------------------------
     if (startDate || endDate) {
       query.createdAt = {};
       if (startDate) query.createdAt.$gte = new Date(startDate);
       if (endDate) query.createdAt.$lte = new Date(endDate);
     }
 
+    if (year) {
+      query.createdAt = {
+        ...query.createdAt,
+        $gte: new Date(`${year}-01-01`),
+        $lte: new Date(`${year}-12-31`)
+      };
+    }
+
+    if (month) {
+      const monthIndex = isNaN(month)
+        ? new Date(`${month} 1, ${year || new Date().getFullYear()}`).getMonth()
+        : Number(month) - 1;
+
+      const y = year || new Date().getFullYear();
+
+      query.createdAt = {
+        $gte: new Date(y, monthIndex, 1),
+        $lte: new Date(y, monthIndex + 1, 0, 23, 59, 59)
+      };
+    }
+
+    if (week && year) {
+      const firstDayOfYear = new Date(year, 0, 1);
+      const startOfWeek = new Date(firstDayOfYear.setDate(firstDayOfYear.getDate() + (week - 1) * 7));
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(endOfWeek.getDate() + 6);
+
+      query.createdAt = {
+        $gte: startOfWeek,
+        $lte: endOfWeek
+      };
+    }
+
+    // ------------------------------------
+    // PAGINATION
+    // ------------------------------------
     const skip = (page - 1) * limit;
 
     const [orders, totalOrders] = await Promise.all([
@@ -437,39 +433,26 @@ const getOrders = async (req, res) => {
     ]);
 
     // ------------------------------------
-    // TOTALS CALCULATION
+    // TOTALS (FROM FILTERED ORDERS)
     // ------------------------------------
-    let totals = {
-      totalSales: 0,
-      confirmedPayments: 0,
-      pendingPayments: 0,
-      orderIds: []
-    };
+    const totals = orders.reduce(
+      (acc, order) => {
+        if (order.status === "cancelled") return acc;
 
-    // 🟢 Single-day shortcut
-    if (date) {
-      const record = await DailyRecord.findOne({ date });
+        acc.totalSales += order.orderTotal || 0;
+        acc.confirmedPayments += order.paidAmount || 0;
+        acc.pendingPayments += order.balance || 0;
+        acc.orderIds.push(order.orderId);
 
-      if (record) {
-        totals = {
-          totalSales: record.totalSales,
-          confirmedPayments: record.confirmedPayments,
-          pendingPayments: record.pendingPayments,
-          orderIds: record.orderIds
-        };
+        return acc;
+      },
+      {
+        totalSales: 0,
+        confirmedPayments: 0,
+        pendingPayments: 0,
+        orderIds: []
       }
-    } 
-    // 🔁 Aggregate filtered orders
-    else {
-      for (const order of orders) {
-        if (order.status === "cancelled") continue;
-
-        totals.totalSales += order.orderTotal || 0;
-        totals.confirmedPayments += order.paidAmount || 0;
-        totals.pendingPayments += order.balance || 0;
-        totals.orderIds.push(order.orderId);
-      }
-    }
+    );
 
     return res.json({
       success: true,
@@ -488,6 +471,8 @@ const getOrders = async (req, res) => {
     });
   }
 };
+
+
 
 
 // =========================================
