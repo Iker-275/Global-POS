@@ -12,7 +12,14 @@ const {createOrder,updateOrder,deleteOrder,getOrders,getOrderById,getOrdersByDat
 const {openDailyRecord,closeDailyRecord, getActiveDailyRecord,} = require("../controllers/recordController");
 const { getDailyRecordById, listDailyRecords } = require("../services/dailyRecordService");
 const { createStatus, updateStatus, deleteStatus, getAllStatuses, getStatusById, toggleVisibility } = require("../controllers/statusController")
-
+const {getAllUsers,getUserById,updateUser,toggleUserActive,deleteUser} = require("../controllers/user_controller");
+const {
+  createRole,
+  getAllRoles,
+  getRoleById,
+  updateRole,
+  deleteRole
+} = require("../controllers/roleController");
 const router = Router();
 
 //auth routes
@@ -140,6 +147,43 @@ router.get("/status", getAllStatuses);
 
 // Get a single order status by ID
 router.get("/status/:id", getStatusById);
+
+// Get all users (paginated)
+router.get("/user",  getAllUsers);
+
+// Get user by ID
+router.get("/user/:id",  getUserById);
+
+// Update user (email / role / active)
+router.put("/user/:id",  updateUser);
+
+// Toggle user active status
+router.patch("/user/:id/toggle-active",  toggleUserActive);
+
+// Delete user
+router.delete("/user/:id",  deleteUser);
+
+
+// =====================================
+// ROLE ROUTES
+// Base: /api/roles
+// =====================================
+
+// Create role
+router.post("/role", createRole);
+
+// Get all roles
+router.get("/role", getAllRoles);
+
+// Get single role by ID
+router.get("/role/:id", getRoleById);
+
+// Update role
+router.put("/role/:id", updateRole);
+
+// Delete role
+router.delete("/role/:id", deleteRole);
+
 
 
 
