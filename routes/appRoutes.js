@@ -1,11 +1,6 @@
 const { Router } = require("express");
 const { login_get, signUp_get, signUp_post, login_post, logout_get } = require("../controllers/auth_controller");
-const {
-    addMenuItem,
-    updateMenuItem,
-    deleteMenuItem,
-    getMenuItems,
-} = require("../controllers/menuController");
+const {addMenuItem,updateMenuItem,deleteMenuItem,getMenuItems,} = require("../controllers/menuController");
 const auth = require("../middleware/authMiddleware")
 const allowRoles = require("../middleware/roleMiddleware")
 const {createOrder,updateOrder,deleteOrder,getOrders,getOrderById,getOrdersByDate, cancelOrder} = require("../controllers/orderController")
@@ -13,13 +8,9 @@ const {openDailyRecord,closeDailyRecord, getActiveDailyRecord,} = require("../co
 const { getDailyRecordById, listDailyRecords } = require("../services/dailyRecordService");
 const { createStatus, updateStatus, deleteStatus, getAllStatuses, getStatusById, toggleVisibility } = require("../controllers/statusController")
 const {getAllUsers,getUserById,updateUser,toggleUserActive,deleteUser} = require("../controllers/user_controller");
-const {
-  createRole,
-  getAllRoles,
-  getRoleById,
-  updateRole,
-  deleteRole
-} = require("../controllers/roleController");
+const {createRole,getAllRoles,getRoleById,updateRole,deleteRole} = require("../controllers/roleController");
+
+const {createExpense,updateExpense,deleteExpense,getExpense,getExpenses} = require("../controllers/expenseController");
 const router = Router();
 
 //auth routes
@@ -184,7 +175,20 @@ router.put("/role/:id", updateRole);
 // Delete role
 router.delete("/role/:id", deleteRole);
 
+// Create expense
+router.post("/expense", createExpense);
 
+// Update expense
+router.put("/expense/:id", updateExpense);
+
+// Delete expense
+router.delete("/expense/:id", deleteExpense);
+
+// Get all expenses (with filters + total recalculation)
+router.get("/expense", getExpenses);
+
+// Get single expense
+router.get("/expense/:id", getExpense);
 
 
 module.exports = router;
