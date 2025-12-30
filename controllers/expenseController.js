@@ -99,6 +99,57 @@ const getExpense = async (req, res) => {
 // ===============================
 // GET EXPENSES WITH FILTERS + TOTAL
 // ===============================
+// const getExpenses = async (req, res) => {
+//   try {
+//     const {
+//       name,
+//       minAmount,
+//       maxAmount,
+//       year,
+//       monthOfYear,
+//       weekOfYear,
+//       date
+//     } = req.query;
+
+//     let filter = {};
+
+//     if (name) {
+//       filter.name = { $regex: name, $options: "i" };
+//     }
+
+//     if (minAmount || maxAmount) {
+//       filter.amount = {};
+//       if (minAmount) filter.amount.$gte = Number(minAmount);
+//       if (maxAmount) filter.amount.$lte = Number(maxAmount);
+//     }
+
+//     if (year) filter.year = Number(year);
+//     if (monthOfYear) filter.monthOfYear = Number(monthOfYear);
+//     if (weekOfYear) filter.weekOfYear = Number(weekOfYear);
+
+//     if (date) {
+//       const d = new Date(date);
+//       filter.day = d.getDate();
+//       filter.monthOfYear = d.getMonth() + 1;
+//       filter.year = d.getFullYear();
+//     }
+
+//     const expenses = await Expense.find(filter).sort({ expenseDate: -1 });
+
+//     // 🔥 ALWAYS recalculate total
+//     const totalAmount = expenses.reduce((sum, e) => sum + e.amount, 0);
+
+//     res.json({
+//       success: true,
+//       count: expenses.length,
+//       totalAmount,
+//       data: expenses
+//     });
+//   } catch (error) {
+//     res.status(500).json({ success: false, message: error.message });
+//   }
+// };
+
 const getExpenses = async (req, res) => {
   try {
     const {
@@ -108,11 +159,16 @@ const getExpenses = async (req, res) => {
       year,
       monthOfYear,
       weekOfYear,
-      date
+      date,
+      page = 1,
+      limit = 20
     } = req.query;
 
     let filter = {};
 
+    // --------------------
+    // FILTERS
+    // --------------------
     if (name) {
       filter.name = { $regex: name, $options: "i" };
     }
@@ -134,21 +190,58 @@ const getExpenses = async (req, res) => {
       filter.year = d.getFullYear();
     }
 
-    const expenses = await Expense.find(filter).sort({ expenseDate: -1 });
+    // --------------------
+    // PAGINATION SETUP
+    // --------------------
+    const currentPage = Number(page);
+    const pageLimit = Number(limit);
+    const skip = (currentPage - 1) * pageLimit;
 
-    // 🔥 ALWAYS recalculate total
-    const totalAmount = expenses.reduce((sum, e) => sum + e.amount, 0);
+    // --------------------
+    // TOTAL COUNT
+    // --------------------
+    const totalItems = await Expense.countDocuments(filter);
+
+    // --------------------
+    // FETCH PAGINATED DATA
+    // --------------------
+    const expenses = await Expense.find(filter)
+      .sort({ expenseDate: -1 })
+      .skip(skip)
+      .limit(pageLimit);
+
+    // --------------------
+    // 🔥 ALWAYS RECALCULATE TOTAL AMOUNT (FILTERED SET)
+    // --------------------
+    const allMatchingExpenses = await Expense.find(filter);
+    const totalAmount = allMatchingExpenses.reduce(
+      (sum, e) => sum + e.amount,
+      0
+    );
+
+    const totalPages = Math.ceil(totalItems / pageLimit);
+    const hasNextPage = currentPage < totalPages;
 
     res.json({
       success: true,
-      count: expenses.length,
+      
+        page: currentPage,
+        limit: pageLimit,
+        totalItems,
+        totalPages,
+        hasNextPage,
+      
       totalAmount,
       data: expenses
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 };
+
 
 // ===============================
 // HELPERS
