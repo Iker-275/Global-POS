@@ -112,6 +112,8 @@ async recalcTotalsForRecord(recordId) {
   return record;
 }
 
+
+
   // async recalcTotalsForRecord(recordId) {
   // //  console.log("1");
 
@@ -210,6 +212,7 @@ async recalcTotalsForRecord(recordId) {
       records
     };
   }
+
 }
 
 module.exports = new DailyRecordService();

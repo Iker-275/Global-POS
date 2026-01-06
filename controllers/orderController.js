@@ -16,6 +16,17 @@ const weekOfYear = require( "dayjs/plugin/weekOfYear.js");
 
 dayjs.extend(weekOfYear);
 
+
+// utils/money.js
+ const roundMoney = (value) => {
+  return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+};
+
+ const normalizeZero = (value) => {
+  return Math.abs(value) < 0.005 ? 0 : value;
+};
+
+
 const createOrder = async (req, res) => {
   try {
     const {
@@ -90,73 +101,8 @@ const createOrder = async (req, res) => {
 };
 
 
-//  const createOrder = async (req, res) => {
 
-//   try {
-//     const {
-//       dailyRecordDate,
-//       user_id,
-//       dishesOrdered,
-//       orderTotal, // required by model, but validate
-//       customer_phone,
-//       customer_name,
-//       status = "pending",
-//       balance: providedBalance,
-//       created_at,
-//     } = req.body;
-    
-//     // 1. Check active daily record
-//     const dailyRecord = await dailyRecordService.getActiveRecord();
-//     if (!dailyRecord) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Cannot create order. Daily Record is not opened."
-//       });
-//     }
- 
- 
-//     // 2. Create order
-//     const order = await Order.create({
-//        dailyRecordDate,
-//       user_id,
-//       dishesOrdered: dishesOrdered || [],
-//       orderTotal,
-//       status,
-//       paymentStatus: "unpaid",
-//       customer_phone: customer_phone || "",
-//       customer_name: customer_name || "",
-//       created_at: created_at || new Date().toISOString(),
-//       dailyRecordId: dailyRecord._id
-//     });
-
-
-//     // 3. Attach to daily record
-//     await dailyRecordService.attachOrderToRecord(order);
-//     // 4. Recalculate totals after creation
-//     console.log("record id :" +dailyRecord._id);
-    
-//     await dailyRecordService.recalcTotalsForRecord(dailyRecord._id);
-
-
-//     return res.status(201).json({
-//       success: true,
-//       message: "Order created successfully",
-//       data: order
-//     });
-
-//   } catch (error) {
-//     return res.status(500).json({ success: false, message: error.message });
-//   }
-// };
-
-
-// =========================================
-// UPDATE ORDER
-// (Recalculate totals after update)
-// =========================================
-
-
- const updateOrder = async (req, res) => {
+ const updateOrder2 = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -190,7 +136,15 @@ const createOrder = async (req, res) => {
       partially_paid = true;
       fully_paid = false;
       balance = total - paid;
-    } else {
+    } 
+    else if (paid === total) {
+      paymentStatus = "paid";
+      partially_paid = false;
+      fully_paid = true;
+      balance = 0;
+    }
+    
+    else {
       paymentStatus = "paid";
       partially_paid = false;
       fully_paid = true;
@@ -208,6 +162,79 @@ const createOrder = async (req, res) => {
 
    
     
+    const updated = await Order.findOneAndUpdate(
+      { orderId: id },
+      updateData,
+      { new: true }
+    );
+
+    await dailyRecordService.recalcTotalsForRecord(existing.dailyRecordId);
+
+    return res.json({
+      success: true,
+      message: "Order updated successfully",
+      data: updated
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+
+
+
+const updateOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const existing = await Order.findOne({ orderId: id });
+    if (!existing) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+
+    const paid = req.body.paidAmount !== undefined
+      ? roundMoney(req.body.paidAmount)
+      : roundMoney(existing.paidAmount);
+
+    const total = roundMoney(existing.orderTotal);
+
+    let paymentStatus = "unpaid";
+    let partially_paid = false;
+    let fully_paid = false;
+    let balance = total;
+
+    if (paid <= 0) {
+      balance = total;
+    } 
+    else if (paid < total) {
+      paymentStatus = "partial";
+      partially_paid = true;
+      balance = roundMoney(total - paid);
+    } 
+    else {
+      paymentStatus = "paid";
+      fully_paid = true;
+      balance = 0;
+    }
+
+    balance = normalizeZero(balance);
+
+    const updateData = {
+      ...req.body,
+      paidAmount: paid,
+      paymentStatus,
+      partially_paid,
+      fully_paid,
+      balance
+    };
+
     const updated = await Order.findOneAndUpdate(
       { orderId: id },
       updateData,
