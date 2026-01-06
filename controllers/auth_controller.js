@@ -75,25 +75,64 @@ const login_get = async (req, res) => {
     res.render('login');
 }
 
-const login_post = async (req, res) => {
-    const { email, password } = req.body;
-    try {
-        const user = await User.login(email, password);
-        const token = createToken(user._id);
-         res.cookie('jwt', token, { httpOnly: true, maxAge: maxAge * 1000 });
+// const login_post = async (req, res) => {
+//     const { email, password } = req.body;
+//     try {
+//         const user = await User.login(email, password);
+//         const token = createToken(user._id);
+//          res.cookie('jwt', token, { httpOnly: true, maxAge: maxAge * 1000 });
 
-        res.status(200).json({ success: true, token,user });
+//         res.status(200).json({ success: true, token,user });
         
 
-    } catch (error) {
-    console.log(error);
-       const errors = handleErrors(error);
-        res.status(400).json({ success: false ,errors})
-        // console.log("error" );
+//     } catch (error) {
+//     console.log(error);
+//        const errors = handleErrors(error);
+//         res.status(400).json({ success: false ,errors})
+//         // console.log("error" );
 
 
+//     }
+// }
+const login_post = async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    const user = await User.login(email, password);
+
+    // 🚫 Block inactive users
+    if (!user.active) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Your account has been deactivated. Please contact an administrator."
+      });
     }
-}
+
+    const token = createToken(user._id);
+
+    res.cookie("jwt", token, {
+      httpOnly: true,
+      maxAge: maxAge * 1000
+    });
+
+    res.status(200).json({
+      success: true,
+      token,
+      user
+    });
+
+  } catch (error) {
+    console.log(error);
+    const errors = handleErrors(error);
+
+    res.status(400).json({
+      success: false,
+      errors
+    });
+  }
+};
+
 
 const logout_get = async(req,res)=>{
     
