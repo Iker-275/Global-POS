@@ -4,7 +4,7 @@ const {addMenuItem,updateMenuItem,deleteMenuItem,getMenuItems,} = require("../co
 const auth = require("../middleware/authMiddleware")
 const allowRoles = require("../middleware/roleMiddleware")
 const {createOrder,updateOrder,deleteOrder,getOrders,getOrderById,getOrdersByDate, cancelOrder} = require("../controllers/orderController")
-const {openDailyRecord,closeDailyRecord, getActiveDailyRecord,} = require("../controllers/recordController");
+const {openDailyRecord,closeDailyRecord, getActiveDailyRecord,fetchTodaysRecord,checkTodayRecordStatus,reopenTodaysRecord} = require("../controllers/recordController");
 const { getDailyRecordById, listDailyRecords } = require("../services/dailyRecordService");
 const { createStatus, updateStatus, deleteStatus, getAllStatuses, getStatusById, toggleVisibility } = require("../controllers/statusController")
 const {getAllUsers,getUserById,updateUser,toggleUserActive,deleteUser} = require("../controllers/user_controller");
@@ -120,6 +120,11 @@ router.get(
 //   allowRoles("admin", "manager", "cashier"),
   getDailyRecordById
 );
+router.get("/sales/today", fetchTodaysRecord);
+router.get("/sales/today/status", checkTodayRecordStatus);
+router.post("/sales/today/reopen", reopenTodaysRecord);
+
+
 
 // Create a new order status
 router.post("/status", createStatus);

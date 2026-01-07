@@ -91,5 +91,70 @@ const openDailyRecord = async (req, res) => {
   }
 };
 
+const checkTodayRecordStatus = async (req, res) => {
+  try {
+    const status = await dailyRecordService.checkTodayRecordStatus();
 
-module.exports ={recalcDailyRecordTotals,listDailyRecords,getDailyRecordById,getActiveDailyRecord,closeDailyRecord,openDailyRecord};
+    return res.json({
+      success: true,
+      ...status
+    });
+
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const fetchTodaysRecord = async (req, res) => {
+  try {
+    const record = await dailyRecordService.fetchTodaysRecord();
+
+    if (!record) {
+      return res.json({
+        success: true,
+        exists: false,
+        message: "No daily record found for today."
+      });
+    }
+
+    return res.json({
+      success: true,
+      exists: true,
+      data: record
+    });
+
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const reopenTodaysRecord = async (req, res) => {
+  try {
+    const {user_id, reason } = req.body;
+    const userId = req.body.user_id; // admin / supervisor
+
+    const result = await dailyRecordService.reopenTodaysRecord({
+      userId,
+      reason
+    });
+
+    return res.json({
+      success: true,
+      message: result.alreadyOpen
+        ? "Daily record is already open."
+        : "Daily record reopened successfully.",
+      data: result.record
+    });
+
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+
+
+
+module.exports ={recalcDailyRecordTotals,listDailyRecords,getDailyRecordById,getActiveDailyRecord,closeDailyRecord,openDailyRecord,fetchTodaysRecord,checkTodayRecordStatus,reopenTodaysRecord};

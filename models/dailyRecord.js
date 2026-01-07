@@ -35,6 +35,22 @@ const DailyRecordSchema = new mongoose.Schema(
                 ref: "Order",
             },
         ],
+        reopenedBy: {
+            type: String, // userId
+            ref: "User",
+            default: null
+        },
+
+        reopenedAt: {
+            type: Date,
+            default: null
+        },
+
+        reopenReason: {
+            type: String,
+            default: ""
+        }
+
     },
     { timestamps: true }
 );

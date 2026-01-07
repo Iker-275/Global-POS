@@ -213,6 +213,77 @@ async recalcTotalsForRecord(recordId) {
     };
   }
 
+  async checkTodayRecordStatus() {
+  const today = moment().format("DD-MM-YYYY");
+
+  const record = await DailyRecord.findOne({ date: today });
+
+  if (!record) {
+    return {
+      exists: false,
+      status: "not_opened",
+      tillOpen: false
+    };
+  }
+
+  if (record.closed) {
+    return {
+      exists: true,
+      status: "closed",
+      tillOpen: false,
+      record
+    };
+  }
+
+  return {
+    exists: true,
+    status: "open",
+    tillOpen: true,
+    record
+  };
+}
+
+async fetchTodaysRecord() {
+  const today = moment().format("DD-MM-YYYY");
+  return await DailyRecord.findOne({ date: today });
+}
+
+async reopenTodaysRecord({ userId, reason }) {
+  const today = moment().format("DD-MM-YYYY");
+
+  const record = await DailyRecord.findOne({ date: today });
+
+  if (!record) {
+    throw new Error("No daily record exists for today.");
+  }
+
+  if (!record.closed) {
+    return {
+      alreadyOpen: true,
+      record
+    };
+  }
+
+  // 🔐 POS-grade audit fields
+  record.started = true;
+  record.closed = false;
+  record.reopenedBy = userId;
+  record.reopenedAt = new Date();
+  record.reopenReason = reason || "Manual reopen";
+
+  // Safety recalculation
+  await this.recalcTotalsForRecord(record._id);
+
+  await record.save();
+
+  return {
+    reopened: true,
+    record
+  };
+}
+
+
+
 }
 
 module.exports = new DailyRecordService();
