@@ -271,6 +271,7 @@ async reopenTodaysRecord({ userId, reason }) {
   // 🔐 POS-grade audit fields
   record.started = true;
   record.closed = false;
+  record.isOpen = true;
   record.reopenedBy = userId;
   record.reopenedAt = new Date();
   record.reopenReason = reason || "Manual reopen";
