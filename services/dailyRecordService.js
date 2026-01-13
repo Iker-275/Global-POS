@@ -35,6 +35,8 @@ class DailyRecordService {
       date: today,
       started: true,
       closed: false,
+      isOpen: true,
+      time_started: moment().format("HH:mm:ss"),
       weekOfYear: moment().week(),
       month: moment().format("MMMM"),
       year: moment().format("YYYY"),
@@ -172,6 +174,8 @@ async recalcTotalsForRecord(recordId) {
     await this.recalcTotalsForRecord(record._id);
 
     record.closed = true;
+    record.isOpen = false;
+    record.time_closed = moment().format("HH:mm:ss");
     await record.save();
 
     return record;

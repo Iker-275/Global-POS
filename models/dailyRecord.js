@@ -10,6 +10,7 @@ const DailyRecordSchema = new mongoose.Schema(
         date: { type: String, required: true },
 
         started: { type: Boolean, default: false },
+        isOpen: { type: Boolean, default: false },
         time_started: { type: String, default: "" },
 
         closed: { type: Boolean, default: false },
