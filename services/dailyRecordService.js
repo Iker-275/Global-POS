@@ -272,6 +272,7 @@ async reopenTodaysRecord({ userId, reason }) {
   record.started = true;
   record.closed = false;
   record.isOpen = true;
+  record.time_closed = "";
   record.reopenedBy = userId;
   record.reopenedAt = new Date();
   record.reopenReason = reason || "Manual reopen";
