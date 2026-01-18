@@ -710,8 +710,8 @@ const getOrdersReport = async (req, res) => {
       month: 0,
       year: 0,
       createdAt: 0,
-      updatedAt: 0,
-      __v: 0
+     // updatedAt: 0,
+    //  __v: 0
     };
 
     const [orders, totalOrders] = await Promise.all([
