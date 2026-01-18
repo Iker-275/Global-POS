@@ -3,7 +3,7 @@ const { login_get, signUp_get, signUp_post, login_post, logout_get } = require("
 const {addMenuItem,updateMenuItem,deleteMenuItem,getMenuItems,} = require("../controllers/menuController");
 const auth = require("../middleware/authMiddleware")
 const allowRoles = require("../middleware/roleMiddleware")
-const {createOrder,updateOrder,deleteOrder,getOrders,getOrderById,getOrdersByDate, cancelOrder} = require("../controllers/orderController")
+const {createOrder,updateOrder,deleteOrder,getOrders,getOrderById,getOrdersByDate, cancelOrder,getOrdersHome,getOrdersReport} = require("../controllers/orderController")
 const {openDailyRecord,closeDailyRecord, getActiveDailyRecord,fetchTodaysRecord,checkTodayRecordStatus,reopenTodaysRecord} = require("../controllers/recordController");
 const { getDailyRecordById, listDailyRecords } = require("../services/dailyRecordService");
 const { createStatus, updateStatus, deleteStatus, getAllStatuses, getStatusById, toggleVisibility } = require("../controllers/statusController")
@@ -57,6 +57,20 @@ router.get(
    // auth,
    // allowRoles("admin", "cashier", "manager"),
     getOrders
+);
+
+router.get(
+    "/order/home",
+   // auth,
+   // allowRoles("admin", "cashier", "manager"),
+    getOrdersHome
+);
+
+router.get(
+    "/order/report",
+   // auth,
+   // allowRoles("admin", "cashier", "manager"),
+    getOrdersReport
 );
 
 // GET SINGLE ORDER BY ID
