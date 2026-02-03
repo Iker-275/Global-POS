@@ -20,12 +20,11 @@ const customerSchema = new mongoose.Schema(
       type: Boolean,
       default: true
     },
-    userId:{
-        unique:true,
-        require:false,
-        type:String,
-        default:""
-    }
+    userId: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "user",
+  default: null
+}
   },
   {
     timestamps: true
@@ -34,5 +33,13 @@ const customerSchema = new mongoose.Schema(
 
 // Helpful index for fast lookup (POS search by phone)
 customerSchema.index({ phone: 1 });
+customerSchema.index(
+  { userId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { userId: { $type: "objectId" } }
+  }
+);
+
 
 module.exports = mongoose.model("Customer", customerSchema);

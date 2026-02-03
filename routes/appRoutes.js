@@ -3,7 +3,7 @@ const { login_get, signUp_get, signUp_post, login_post, logout_get } = require("
 const {addMenuItem,updateMenuItem,deleteMenuItem,getMenuItems,} = require("../controllers/menuController");
 const auth = require("../middleware/authMiddleware")
 const allowRoles = require("../middleware/roleMiddleware")
-const {createOrder,updateOrder,deleteOrder,getOrders,getOrderById,getOrdersByDate, cancelOrder,getOrdersHome,getOrdersReport} = require("../controllers/orderController")
+const {createOrder,updateOrder,deleteOrder,getOrders,getOrderById,getOrdersByDate, cancelOrder,getOrdersHome,getOrdersReport, bulkPayOrders} = require("../controllers/orderController")
 const {openDailyRecord,closeDailyRecord, getActiveDailyRecord,fetchTodaysRecord,checkTodayRecordStatus,reopenTodaysRecord} = require("../controllers/recordController");
 const { getDailyRecordById, listDailyRecords } = require("../services/dailyRecordService");
 const { createStatus, updateStatus, deleteStatus, getAllStatuses, getStatusById, toggleVisibility } = require("../controllers/statusController")
@@ -40,116 +40,33 @@ router.post(
    // allowRoles("admin", "cashier", "manager"),
     createOrder
 );
+router.put("/order/bulk-pay", bulkPayOrders);
+router.put("/order/:id",updateOrder);
+router.delete("/order/:id",deleteOrder);
+router.get("/order", getOrders);
+router.get("/order/home",getOrdersHome);
+router.get( "/order/report",getOrdersReport);
+router.get("/order/:id",getOrderById);
+router.post("/order/cancel/:id", cancelOrder);
+router.get("/order/date/:date",getOrdersByDate);
 
-// UPDATE ORDER
-router.put(
-    "/order/:id",
-  //  auth,
-   // allowRoles("admin", "cashier", "manager"),
-    updateOrder
-);
 
-// DELETE ORDER
-router.delete(
-    "/order/:id",
-  //  auth,
-   // allowRoles("admin"),
-    deleteOrder
-);
-
-// GET ALL ORDERS WITH FILTERS + PAGINATION
-router.get(
-    "/order",
-   // auth,
-   // allowRoles("admin", "cashier", "manager"),
-    getOrders
-);
-
-router.get(
-    "/order/home",
-   // auth,
-   // allowRoles("admin", "cashier", "manager"),
-    getOrdersHome
-);
-
-router.get(
-    "/order/report",
-   // auth,
-   // allowRoles("admin", "cashier", "manager"),
-    getOrdersReport
-);
-
-// GET SINGLE ORDER BY ID
-router.get(
-    "/order/:id",
-   // auth,
-   // allowRoles("admin", "cashier", "manager"),
-    getOrderById
-);
-
-router.post(
-    "/order/cancel/:id",
-   // auth,
-   // allowRoles("admin", "cashier", "manager"),
-    cancelOrder
-);
-// GET ORDERS OF A SPECIFIC DATE
-router.get(
-    "/order/date/:date",
-   // auth,
-   // allowRoles("admin", "cashier", "manager"),
-    getOrdersByDate
-);
-
-//records
-// Create/open daily record
-router.post(
-  "/sales/open",
+router.post("/sales/open",
 //   auth,
 //   allowRoles("admin", "manager"),
-  openDailyRecord
-);
-
-// Close daily record
-router.post(
-  "/sales/close",
-//   auth,
-//   allowRoles("admin", "manager"),
-  closeDailyRecord
-);
-
-// Get today’s DR
-router.get(
-  "/sales/today",
-//   auth,
-//   allowRoles("admin", "manager", "cashier"),
-  getActiveDailyRecord
-);
-
-
-router.get(
-  "/sales/all",
-//   auth,
-//   allowRoles("admin", "manager", "cashier"),
-  listDailyRecords
-);
-// Get DR by id
-router.get(
-  "/sales/:id",
-//   auth,
-//   allowRoles("admin", "manager", "cashier"),
-  getDailyRecordById
-);
+  openDailyRecord);
+router.post("/sales/close",closeDailyRecord);
+router.get("/sales/today",getActiveDailyRecord);
+router.get("/sales/all",listDailyRecords);
+router.get("/sales/:id",getDailyRecordById);
 router.get("/sales/today", fetchTodaysRecord);
 router.get("/sales/today/status", checkTodayRecordStatus);
 router.post("/sales/today/reopen", reopenTodaysRecord);
 
 
 
-// Create a new order status
-router.post("/status", createStatus);
-
 // order status
+router.post("/status", createStatus);
 router.put("/status/:id", updateStatus);
 router.put("/status/toggle/:id", toggleVisibility);
 router.delete("/status/:id", deleteStatus);

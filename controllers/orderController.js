@@ -314,13 +314,19 @@ const updateOrder = async (req, res) => {
 
     balance = normalizeZero(balance);
 
+     let status = req.body.status || existing.status;
+    if (paymentStatus === "paid") {
+      status = "paid"; // automatically mark order as paid
+    }
+
     const updateData = {
       ...req.body,
       paidAmount: paid,
       paymentStatus,
       partially_paid,
       fully_paid,
-      balance
+      balance,
+      status
     };
 
     const updated = await Order.findOneAndUpdate(
@@ -346,48 +352,70 @@ const updateOrder = async (req, res) => {
 };
 
 
+const bulkPayOrders = async (req, res) => {
+  try {
+    const { orderIds } = req.body;
 
+    if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide an array of orderIds to update"
+      });
+    }
 
+    // Fetch all orders
+    const orders = await Order.find({ orderId: { $in: orderIds } });
 
+    if (orders.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No orders found for the provided orderIds"
+      });
+    }
 
-// =========================================
-// CANCEL ORDER (if still pending)
-// Should not affect balances
-// =========================================
-//  const cancelOrder = async (req, res) => {
-//   try {
-//     const { id } = req.params;
+    // Keep track of daily records affected
+    const dailyRecordIds = new Set();
 
-//     const order = await Order.findOne({ orderId: id });
+    // Update each order
+    const bulkUpdates = orders.map(order => {
+      dailyRecordIds.add(order.dailyRecordId.toString());
 
-//     if (!order) {
-//       return res.status(404).json({ success: false, message: "Order not found" });
-//     }
+      return {
+        updateOne: {
+          filter: { orderId: order.orderId },
+          update: {
+            paymentStatus: "paid",
+            status: "paid",
+            fully_paid: true,
+            partially_paid: false,
+            balance: 0,
+            paidAmount: order.orderTotal
+          }
+        }
+      };
+    });
 
-//     if (order.status !== "pending") {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Only pending orders can be cancelled."
-//       });
-//     }
+    // Apply bulk updates
+    await Order.bulkWrite(bulkUpdates);
 
-//     order.status = "cancelled";
-//     await order.save();
+    // Recalculate totals for affected daily records
+    for (const drId of dailyRecordIds) {
+      await dailyRecordService.recalcTotalsForRecord(drId);
+    }
 
-//     // Recalculate totals (will auto-ignore cancelled orders)
-//     //await dailyRecordService.recalcTotalsForRecord(order.dailyRecordId);
+    return res.json({
+      success: true,
+      message: `${orders.length} orders updated to paid successfully`
+    });
 
-//     return res.json({
-//       success: true,
-//       message: "Order cancelled successfully",
-//       data: order
-//     });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
 
-//   } catch (error) {
-//     console.log("error"+ error)
-//     return res.status(500).json({ success: false, message: error.message });
-//   }
-// };
 
 const cancelOrder = async (req, res) => {
   try {
@@ -700,6 +728,157 @@ const getOrdersHome = async (req, res) => {
   }
 };
 
+// const getOrdersReport = async (req, res) => {
+//   try {
+//     let {
+//       page = 1,
+//       limit = 20,
+//       status,
+//       customer,
+//       date,
+//       startDate,
+//       endDate,
+//       month,
+//       year,
+//       week
+//     } = req.query;
+
+//     page = parseInt(page);
+//     limit = parseInt(limit);
+
+//     const query = {};
+
+//     // -----------------------------
+//     // BASIC FILTERS
+//     // -----------------------------
+//     if (status) query.status = status;
+//     if (customer) query.customer_name = customer;
+
+//     // -----------------------------
+//     // DATE FILTERS
+//     // -----------------------------
+//     if (date) {
+//       const [day, month, year] = date.split("-");
+//       query.createdAt = {
+//         $gte: new Date(`${year}-${month}-${day}T00:00:00.000Z`),
+//         $lte: new Date(`${year}-${month}-${day}T23:59:59.999Z`)
+//       };
+//     }
+
+//     if (startDate || endDate) {
+//       query.createdAt = {};
+//       if (startDate) query.createdAt.$gte = new Date(startDate);
+//       if (endDate) query.createdAt.$lte = new Date(endDate);
+//     }
+
+//     if (year) {
+//       query.createdAt = {
+//         ...query.createdAt,
+//         $gte: new Date(`${year}-01-01`),
+//         $lte: new Date(`${year}-12-31`)
+//       };
+//     }
+
+//     if (month) {
+//       const monthIndex = isNaN(month)
+//         ? new Date(`${month} 1, ${year || new Date().getFullYear()}`).getMonth()
+//         : Number(month) - 1;
+
+//       const y = year || new Date().getFullYear();
+
+//       query.createdAt = {
+//         $gte: new Date(y, monthIndex, 1),
+//         $lte: new Date(y, monthIndex + 1, 0, 23, 59, 59)
+//       };
+//     }
+
+//     if (week && year) {
+//       const firstDay = new Date(year, 0, 1);
+//       const startOfWeek = new Date(firstDay.setDate(firstDay.getDate() + (week - 1) * 7));
+//       const endOfWeek = new Date(startOfWeek);
+//       endOfWeek.setDate(endOfWeek.getDate() + 6);
+
+//       query.createdAt = {
+//         $gte: startOfWeek,
+//         $lte: endOfWeek
+//       };
+//     }
+
+//     // -----------------------------
+//     // PAGINATION
+//     // -----------------------------
+//     const skip = (page - 1) * limit;
+
+//     // -----------------------------
+//     // FIELD PROJECTION (LIGHT RESPONSE)
+//     // -----------------------------
+//     const projection = {
+//       dishesOrdered: 0,
+//       weekOfYear: 0,
+//       month: 0,
+//       year: 0,
+//       createdAt: 0,
+//      // updatedAt: 0,
+//     //  __v: 0
+//     };
+
+//     const [orders, totalOrders] = await Promise.all([
+//       Order.find(query, projection)
+//         .skip(skip)
+//         .limit(limit)
+//         .sort({ createdAt: -1 })
+//         .lean(), // faster & lighter
+//       Order.countDocuments(query)
+//     ]);
+
+//      // ------------------------------------
+//     // TOTALS (FROM FILTERED ORDERS)
+//     // ------------------------------------
+//     const totals = orders.reduce(
+//       (acc, order) => {
+//         if (order.status === "cancelled") return acc;
+
+//         acc.totalSales += order.orderTotal || 0;
+//         acc.confirmedPayments += order.paidAmount || 0;
+//         acc.pendingPayments += order.balance || 0;
+//         acc.orderIds.push(order.orderId);
+
+//         return acc;
+//       },
+//       {
+//         totalSales: 0,
+//         confirmedPayments: 0,
+//         pendingPayments: 0,
+//         orderIds: []
+//       }
+//     );
+
+//     return res.json({
+//       success: true,
+//       page,
+//       limit,
+//       totalPages: Math.ceil(totalOrders / limit),
+//       totals,
+//       totalOrders,
+//       data: orders
+//     });
+
+//   } catch (error) {
+//     return res.status(500).json({
+//       success: false,
+//       message: error.message
+//     });
+//   }
+// };
+
+
+
+
+
+// =========================================
+// GET ORDER BY ID
+// =========================================
+ 
 const getOrdersReport = async (req, res) => {
   try {
     let {
@@ -777,44 +956,16 @@ const getOrdersReport = async (req, res) => {
     }
 
     // -----------------------------
-    // PAGINATION
+    // CALCULATE TOTALS ACROSS ALL FILTERED ORDERS
     // -----------------------------
-    const skip = (page - 1) * limit;
-
-    // -----------------------------
-    // FIELD PROJECTION (LIGHT RESPONSE)
-    // -----------------------------
-    const projection = {
-      dishesOrdered: 0,
-      weekOfYear: 0,
-      month: 0,
-      year: 0,
-      createdAt: 0,
-     // updatedAt: 0,
-    //  __v: 0
-    };
-
-    const [orders, totalOrders] = await Promise.all([
-      Order.find(query, projection)
-        .skip(skip)
-        .limit(limit)
-        .sort({ createdAt: -1 })
-        .lean(), // faster & lighter
-      Order.countDocuments(query)
-    ]);
-
-     // ------------------------------------
-    // TOTALS (FROM FILTERED ORDERS)
-    // ------------------------------------
-    const totals = orders.reduce(
+    const allFilteredOrders = await Order.find(query).lean();
+    const totals = allFilteredOrders.reduce(
       (acc, order) => {
         if (order.status === "cancelled") return acc;
-
         acc.totalSales += order.orderTotal || 0;
         acc.confirmedPayments += order.paidAmount || 0;
         acc.pendingPayments += order.balance || 0;
         acc.orderIds.push(order.orderId);
-
         return acc;
       },
       {
@@ -825,14 +976,33 @@ const getOrdersReport = async (req, res) => {
       }
     );
 
+    // -----------------------------
+    // PAGINATED DATA
+    // -----------------------------
+    const skip = (page - 1) * limit;
+    const projection = {
+      dishesOrdered: 0,
+      weekOfYear: 0,
+      month: 0,
+      year: 0,
+      createdAt: 0,
+      updatedAt: 0
+    };
+
+    const paginatedOrders = await Order.find(query, projection)
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 })
+      .lean();
+
     return res.json({
       success: true,
       page,
       limit,
-      totalPages: Math.ceil(totalOrders / limit),
+      totalPages: Math.ceil(allFilteredOrders.length / limit),
+      totalOrders: allFilteredOrders.length,
       totals,
-      totalOrders,
-      data: orders
+      data: paginatedOrders
     });
 
   } catch (error) {
@@ -844,13 +1014,7 @@ const getOrdersReport = async (req, res) => {
 };
 
 
-
-
-
-// =========================================
-// GET ORDER BY ID
-// =========================================
- const getOrderById = async (req, res) => {
+const getOrderById = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
 
@@ -888,4 +1052,4 @@ const getOrdersReport = async (req, res) => {
 };
 
 
-module.exports = { cancelOrder,getOrderById,getOrdersByDate,getOrders,deleteOrder,updateOrder,createOrder,getOrdersHome,getOrdersReport };
+module.exports = { cancelOrder,getOrderById,getOrdersByDate,getOrders,deleteOrder,updateOrder,createOrder,getOrdersHome,getOrdersReport,bulkPayOrders };
