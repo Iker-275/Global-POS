@@ -11,6 +11,16 @@ const userSchema = new mongoose.Schema({
         lowercase: true,
         validate: [isEmail, 'Please enter a valid email']
     },
+    name:{
+        type: String,
+        lowercase: true,
+
+    },
+    phone:{
+        type: String,
+        unique:true,
+        required:true
+    },
     password: {
         type: String,
         required: true,
@@ -19,7 +29,8 @@ const userSchema = new mongoose.Schema({
     role:{
         type:String,
         required:true,
-        default:"User"
+        lowercase:true,
+        default:"user"
     },
     active:{
         type:Boolean,
@@ -41,58 +52,55 @@ userSchema.pre('save', async function (next) {
 
 
 
-userSchema.statics.login = async function(email, password) {
-    const user = await this.findOne({ email });
+// userSchema.statics.login = async function(email, password) {
+//     const user = await this.findOne({ email });
 
-    if (user) {
-        //bcrypt checks for hashing automatically
-        const auth = await bcrypt.compare(password, user.password)
+//     if (user) {
+//         //bcrypt checks for hashing automatically
+//         const auth = await bcrypt.compare(password, user.password)
 
-        if (auth) {
-            return user;
-        }
-        throw Error("Incorrect Password")
-    }
-
-
-    throw Error("Incorrect email")
-
-}
+//         if (auth) {
+//             return user;
+//         }
+//         throw Error("Incorrect Password")
+//     }
 
 
+//     throw Error("Incorrect email")
+
+// }
+userSchema.statics.login = async function (identifier, password) {
+  // Determine if identifier is email or phone
+  const query = identifier.includes("@")
+    ? { email: identifier.toLowerCase() }
+    : { phone: identifier };
+
+  const user = await this.findOne(query);
+
+  if (!user) {
+    throw Error("Incorrect email or phone");
+  }
+
+  // Check active status
+  if (!user.active) {
+    throw Error("Account inactive");
+  }
+
+  const auth = await bcrypt.compare(password, user.password);
+
+  if (!auth) {
+    throw Error("Incorrect Password");
+  }
+
+  return user;
+};
+
+userSchema.index({ email: 1 });
+userSchema.index({ phone: 1 });
+userSchema.index({ role: 1 });
 
 
 const User = mongoose.model('user', userSchema);
 module.exports = User;
 
 
-
-
-
-
-
-// import mongoose from "mongoose";
-
-// const UserSchema = new mongoose.Schema(
-//   {
-//     _id: { type: String, required: true }, // UUID or generated string
-
-//     name: { type: String, required: true },
-
-//     role: {
-//       type: String,
-//       enum: ["cashier", "waiter", "manager", "admin"],
-//       required: true,
-//     },
-
-//     phone: { type: String, default: "" },
-//     passwordHash: { type: String, required: true },
-
-//     active: { type: Boolean, default: true },
-//   },
-//   { timestamps: true }
-// );
-
-// UserSchema.index({ role: 1 });
-
-// export default mongoose.model("User", UserSchema);

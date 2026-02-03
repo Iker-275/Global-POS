@@ -11,6 +11,12 @@ const {getAllUsers,getUserById,updateUser,toggleUserActive,deleteUser} = require
 const {createRole,getAllRoles,getRoleById,updateRole,deleteRole} = require("../controllers/roleController");
 
 const {createExpense,updateExpense,deleteExpense,getExpense,getExpenses} = require("../controllers/expenseController");
+const {
+  createCustomer,
+  getCustomerById,
+  getCustomers,
+  updateCustomer
+} = require("../controllers/customerController");
 const router = Router();
 
 //auth routes
@@ -143,71 +149,41 @@ router.post("/sales/today/reopen", reopenTodaysRecord);
 // Create a new order status
 router.post("/status", createStatus);
 
-// Update an order status
+// order status
 router.put("/status/:id", updateStatus);
-
-// toggle visibility
 router.put("/status/toggle/:id", toggleVisibility);
-
-// Delete an order status
 router.delete("/status/:id", deleteStatus);
-
-// Get all order statuses
 router.get("/status", getAllStatuses);
-
-// Get a single order status by ID
 router.get("/status/:id", getStatusById);
 
-// Get all users (paginated)
+//  users 
 router.get("/user",  getAllUsers);
-
-// Get user by ID
 router.get("/user/:id",  getUserById);
-
-// Update user (email / role / active)
 router.put("/user/:id",  updateUser);
-
-// Toggle user active status
 router.patch("/user/:id/toggle-active",  toggleUserActive);
-
-// Delete user
 router.delete("/user/:id",  deleteUser);
 
 
-// =====================================
-// ROLE ROUTES
-// Base: /api/roles
-// =====================================
 
-// Create role
+//  role
 router.post("/role", createRole);
-
-// Get all roles
 router.get("/role", getAllRoles);
-
-// Get single role by ID
 router.get("/role/:id", getRoleById);
-
-// Update role
 router.put("/role/:id", updateRole);
-
-// Delete role
 router.delete("/role/:id", deleteRole);
 
-// Create expense
+// expense
 router.post("/expense", createExpense);
-
-// Update expense
 router.put("/expense/:id", updateExpense);
-
-// Delete expense
 router.delete("/expense/:id", deleteExpense);
-
-// Get all expenses (with filters + total recalculation)
 router.get("/expense", getExpenses);
-
-// Get single expense
 router.get("/expense/:id", getExpense);
+
+
+router.post("/customer", createCustomer);
+router.get("/customer", getCustomers);
+router.get("/customer/:id", getCustomerById);
+router.put("/customer/:id", updateCustomer);
 
 
 module.exports = router;

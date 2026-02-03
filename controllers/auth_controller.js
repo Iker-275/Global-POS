@@ -1,5 +1,7 @@
 const User = require("../models/userModel")
 const jwt = require("jsonwebtoken")
+const Customer = require("../models/customerModel");
+
 
 const handleErrors = (err) => {
     // console.log("error" + err);
@@ -18,11 +20,14 @@ const handleErrors = (err) => {
         return errors;
     }
 
-    if (err.message === 'Incorrect email') {
-        errors.email = "Email is not registered.Try again.";
-        return errors;
-    }
-    x
+    // if (err.message === 'Incorrect email') {
+    //     errors.email = "Email is not registered.Try again.";
+    //     return errors;
+    // }
+    if (err.message === "Incorrect email or phone") {
+    errors.email = "Email or phone is not registered.";
+    return errors;
+  }
 
     //duplicate error code
     if (err.code === 11000) {
@@ -58,26 +63,118 @@ const signUp_get = async (req, res) => {
 }
 
 
+
+// const signUp_post = async (req, res) => {
+//   const { email, name, password, role, phone } = req.body;
+
+//   try {
+//     // 🔍 Check if phone already exists
+//     const existingPhone = await User.findOne({ phone });
+
+//     if (existingPhone) {
+//       return res.status(400).json({
+//         success: false,
+//         errors: {
+//           phone: "A user with this phone number already exists"
+//         }
+//       });
+//     }
+
+//     const user = await User.create({
+//       email,
+//       name,
+//       password,
+//       role,
+//       phone
+//     });
+
+//     const token = createToken(user._id);
+
+//     res.status(201).json({
+//       success: true,
+//       token,
+//       user
+//     });
+
+//   } catch (error) {
+//     console.log(error);
+
+//     const errors = handleErrors(error);
+
+//     res.status(400).json({
+//       success: false,
+//       errors
+//     });
+//   }
+// };
+
+
+
+
 const signUp_post = async (req, res) => {
-    const { email, password, role } = req.body;
-    // console.log(email,password);
+  const { email, name, password, role, phone } = req.body;
 
-    try {
-        const user = await User.create({ email, password, role });
-        const token = createToken(user._Id);
-
-
-        res.status(201).json({ success: true, token, user });
-    } catch (error) {
-
-        const errors = handleErrors(error);
-        //console.log(errors);
-
-        res.status(400).json({ success: false, errors })
-
+  try {
+    // ❌ User already exists
+    const existingUser = await User.findOne({ phone });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        errors: {
+          phone: "An account with this phone number already exists"
+        }
+      });
     }
-}
 
+    // 🔍 Check existing customer
+    let existingCustomer = null;
+    if (role === "customer") {
+      existingCustomer = await Customer.findOne({ phone });
+    }
+
+    // 👤 Create user
+    const user = await User.create({
+      email,
+      name,
+      password,
+      role,
+      phone,
+      active: role === "customer"
+    });
+
+    // 🔗 LINK or CREATE customer
+    if (role === "customer") {
+      if (existingCustomer) {
+        // 🔄 Upgrade existing customer
+        existingCustomer.userId = user._id;
+        existingCustomer.name = name; // update name if needed
+        await existingCustomer.save();
+      } else {
+        // 🆕 Create new customer
+        await Customer.create({
+          name,
+          phone,
+          userId: user._id
+        });
+      }
+    }
+
+    const token = createToken(user._id);
+
+    res.status(201).json({
+      success: true,
+      token,
+      user
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(400).json({
+      success: false,
+      errors: handleErrors(error)
+    });
+  }
+};
 
 const login_get = async (req, res) => {
     res.render('login');

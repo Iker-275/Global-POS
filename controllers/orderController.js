@@ -7,6 +7,8 @@ const Order = require ("../models/orderModel.js")
 const dailyRecordService = require("../services/dailyRecordService.js")
 const dayjs = require( "dayjs");
 const weekOfYear = require( "dayjs/plugin/weekOfYear.js");
+const customerService = require("../services/customerService.js");
+
 
 
 // =========================================
@@ -25,6 +27,80 @@ dayjs.extend(weekOfYear);
  const normalizeZero = (value) => {
   return Math.abs(value) < 0.005 ? 0 : value;
 };
+
+
+// const createOrder = async (req, res) => {
+//   try {
+//     const {
+//       dishesOrdered,
+//       orderTotal,
+//       customer_phone,
+//       customer_name,
+//       status = "pending",
+//       created_at
+//     } = req.body;
+
+//     // 1. Check active daily record
+//     const dailyRecord = await dailyRecordService.getActiveRecord();
+
+//     if (!dailyRecord) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Cannot create order. Daily Record is not opened."
+//       });
+//     }
+
+//     if (dailyRecord.closed) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Daily Record is closed. No orders allowed."
+//       });
+//     }
+
+//     // 2. Derive date fields (SOURCE OF TRUTH)
+//     const recordDate = dayjs(dailyRecord.date, "DD-MM-YYYY");
+
+//     const order = await Order.create({
+//       dailyRecordId: dailyRecord._id,
+//       dailyRecordDate: dailyRecord.date,
+
+//       weekOfYear: dailyRecord.weekOfYear ?? recordDate.week(),
+//       month: dailyRecord.month ?? recordDate.format("MMMM"),
+//       year: dailyRecord.year ?? recordDate.format("YYYY"),
+
+//       user_id: req.user?.id || req.body.user_id,
+
+//       dishesOrdered: dishesOrdered || [],
+//       orderTotal,
+
+//       status,
+//       paymentStatus: "unpaid",
+//       paidAmount: 0,
+//       balance: orderTotal,
+
+//       customer_phone: customer_phone || "",
+//       customer_name: customer_name || "",
+
+//       created_at: created_at || new Date().toISOString()
+//     });
+
+//     // 3. Attach + recalc
+//     await dailyRecordService.attachOrderToRecord(order);
+//     await dailyRecordService.recalcTotalsForRecord(dailyRecord._id);
+
+//     return res.status(201).json({
+//       success: true,
+//       message: "Order created successfully",
+//       data: order
+//     });
+
+//   } catch (error) {
+//     return res.status(500).json({
+//       success: false,
+//       message: error.message
+//     });
+//   }
+// };
 
 
 const createOrder = async (req, res) => {
@@ -55,7 +131,20 @@ const createOrder = async (req, res) => {
       });
     }
 
-    // 2. Derive date fields (SOURCE OF TRUTH)
+    // 2. Silently handle customer (NON-BLOCKING)
+    if (customer_phone && customer_phone.trim()) {
+      try {
+        await customerService.findOrCreateCustomerByPhone({
+          phone: customer_phone.trim(),
+          name: customer_name
+        });
+      } catch (err) {
+        // POS rule: customer failure should NEVER block an order
+        console.error("Customer creation skipped:", err.message);
+      }
+    }
+
+    // 3. Derive date fields
     const recordDate = dayjs(dailyRecord.date, "DD-MM-YYYY");
 
     const order = await Order.create({
@@ -82,7 +171,7 @@ const createOrder = async (req, res) => {
       created_at: created_at || new Date().toISOString()
     });
 
-    // 3. Attach + recalc
+    // 4. Attach + recalc
     await dailyRecordService.attachOrderToRecord(order);
     await dailyRecordService.recalcTotalsForRecord(dailyRecord._id);
 
@@ -99,7 +188,6 @@ const createOrder = async (req, res) => {
     });
   }
 };
-
 
 
  const updateOrder2 = async (req, res) => {
@@ -331,9 +419,6 @@ const cancelOrder = async (req, res) => {
 };
 
 
-// =========================================
-// DELETE ORDER (remove & recalc)
-// =========================================
  const deleteOrder = async (req, res) => {
   try {
     const { id } = req.params;
@@ -359,13 +444,6 @@ const cancelOrder = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
-
-
-// =========================================
-// GET ORDERS (pagination + filters)
-// status, date, customer, user
-// =========================================
-
 
 
 
@@ -525,6 +603,8 @@ const getOrdersHome = async (req, res) => {
     // -----------------------------
     if (status) query.status = status;
     if (customer) query.customer_name = customer;
+    if (customer) query.customer_phone = customer;
+
 
     // -----------------------------
     // DATE FILTERS
