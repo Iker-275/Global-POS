@@ -15,7 +15,8 @@ const {
   createCustomer,
   getCustomerById,
   getCustomers,
-  updateCustomer
+  updateCustomer,
+  getOrdersWithGlobalBalances
 } = require("../controllers/customerController");
 const router = Router();
 
@@ -101,7 +102,6 @@ router.post("/customer", createCustomer);
 router.get("/customer", getCustomers);
 router.get("/customer/:id", getCustomerById);
 router.put("/customer/:id", updateCustomer);
-
 
 module.exports = router;
 
