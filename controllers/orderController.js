@@ -658,12 +658,12 @@ const getCustomerOrdersWithBalance = async (req, res) => {
 
     return res.json({
       success: true,
-      customer: {
-        phone
-      },
-      filters: {
-        onlyUnpaid: onlyUnpaid === "true"
-      },
+      // customer: {
+      //   phone
+      // },
+      // filters: {
+      //   onlyUnpaid: onlyUnpaid === "true"
+      // },
       page,
       limit,
       totalPages: Math.ceil(totalOrders / limit),
