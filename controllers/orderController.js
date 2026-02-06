@@ -526,6 +526,162 @@ const getOrders = async (req, res) => {
 };
 
 
+const getCustomerOrdersWithBalance = async (req, res) => {
+  try {
+    let {
+      page = 1,
+      limit = 20,
+      phone,            // REQUIRED: customer phone
+      status,           // optional order status
+      onlyUnpaid,       // true / false
+      date,
+      startDate,
+      endDate,
+      month,
+      year,
+      week
+    } = req.query;
+
+    if (!phone) {
+      return res.status(400).json({
+        success: false,
+        message: "Customer phone number is required"
+      });
+    }
+
+    page = parseInt(page);
+    limit = parseInt(limit);
+
+    // ------------------------------------
+    // BASE QUERY (CUSTOMER-SCOPED)
+    // ------------------------------------
+    const query = {
+      customer_phone: phone
+    };
+
+    if (status) {
+      query.status = status;
+    }
+
+    if (onlyUnpaid === "true") {
+      query.paymentStatus = { $ne: "paid" };
+    }
+
+    // ------------------------------------
+    // DATE FILTERS
+    // ------------------------------------
+    if (date) {
+      const [day, month, year] = date.split("-");
+      query.createdAt = {
+        $gte: new Date(`${year}-${month}-${day}T00:00:00.000Z`),
+        $lte: new Date(`${year}-${month}-${day}T23:59:59.999Z`)
+      };
+    }
+
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate);
+      if (endDate) query.createdAt.$lte = new Date(endDate);
+    }
+
+    if (year) {
+      query.createdAt = {
+        ...query.createdAt,
+        $gte: new Date(`${year}-01-01`),
+        $lte: new Date(`${year}-12-31`)
+      };
+    }
+
+    if (month) {
+      const monthIndex = isNaN(month)
+        ? new Date(`${month} 1, ${year || new Date().getFullYear()}`).getMonth()
+        : Number(month) - 1;
+
+      const y = year || new Date().getFullYear();
+
+      query.createdAt = {
+        $gte: new Date(y, monthIndex, 1),
+        $lte: new Date(y, monthIndex + 1, 0, 23, 59, 59)
+      };
+    }
+
+    if (week && year) {
+      const firstDayOfYear = new Date(year, 0, 1);
+      const startOfWeek = new Date(
+        firstDayOfYear.setDate(firstDayOfYear.getDate() + (week - 1) * 7)
+      );
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(endOfWeek.getDate() + 6);
+
+      query.createdAt = {
+        $gte: startOfWeek,
+        $lte: endOfWeek
+      };
+    }
+
+    // ------------------------------------
+    // GLOBAL BALANCES (NO PAGINATION)
+    // ------------------------------------
+    const allCustomerOrders = await Order.find(query).lean();
+
+    const balances = allCustomerOrders.reduce(
+      (acc, order) => {
+        if (order.status === "cancelled") return acc;
+
+        acc.totalSales += order.orderTotal || 0;
+        acc.totalPaid += order.paidAmount || 0;
+        acc.totalBalance += order.balance || 0;
+        acc.totalOrders++;
+
+        return acc;
+      },
+      {
+        totalSales: 0,
+        totalPaid: 0,
+        totalBalance: 0,
+        totalOrders: 0
+      }
+    );
+
+    // ------------------------------------
+    // PAGINATED ORDERS
+    // ------------------------------------
+    const skip = (page - 1) * limit;
+
+    const [orders, totalOrders] = await Promise.all([
+      Order.find(query)
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 }),
+      Order.countDocuments(query)
+    ]);
+
+    return res.json({
+      success: true,
+      customer: {
+        phone
+      },
+      filters: {
+        onlyUnpaid: onlyUnpaid === "true"
+      },
+      page,
+      limit,
+      totalPages: Math.ceil(totalOrders / limit),
+      totalOrders,
+      balances, // 👈 GLOBAL, NOT PAGINATED
+      data: orders
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+
+
 const getOrdersHome = async (req, res) => {
   try {
     let {
@@ -972,4 +1128,4 @@ const getOrderById = async (req, res) => {
 };
 
 
-module.exports = { cancelOrder,getOrderById,getOrdersByDate,getOrders,deleteOrder,updateOrder,createOrder,getOrdersHome,getOrdersReport,bulkPayOrders };
+module.exports = { cancelOrder,getOrderById,getOrdersByDate,getOrders,deleteOrder,updateOrder,createOrder,getOrdersHome,getOrdersReport,bulkPayOrders,getCustomerOrdersWithBalance };

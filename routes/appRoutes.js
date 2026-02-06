@@ -3,7 +3,7 @@ const { login_get, signUp_get, signUp_post, login_post, logout_get } = require("
 const {addMenuItem,updateMenuItem,deleteMenuItem,getMenuItems,} = require("../controllers/menuController");
 const auth = require("../middleware/authMiddleware")
 const allowRoles = require("../middleware/roleMiddleware")
-const {createOrder,updateOrder,deleteOrder,getOrders,getOrderById,getOrdersByDate, cancelOrder,getOrdersHome,getOrdersReport, bulkPayOrders} = require("../controllers/orderController")
+const {createOrder,updateOrder,deleteOrder,getOrders,getOrderById,getOrdersByDate, cancelOrder,getOrdersHome,getOrdersReport, bulkPayOrders, getCustomerOrdersWithBalance} = require("../controllers/orderController")
 const {openDailyRecord,closeDailyRecord, getActiveDailyRecord,fetchTodaysRecord,checkTodayRecordStatus,reopenTodaysRecord} = require("../controllers/recordController");
 const { getDailyRecordById, listDailyRecords } = require("../services/dailyRecordService");
 const { createStatus, updateStatus, deleteStatus, getAllStatuses, getStatusById, toggleVisibility } = require("../controllers/statusController")
@@ -16,7 +16,7 @@ const {
   getCustomerById,
   getCustomers,
   updateCustomer,
-  getOrdersWithGlobalBalances
+
 } = require("../controllers/customerController");
 const router = Router();
 
@@ -41,6 +41,8 @@ router.post(
    // allowRoles("admin", "cashier", "manager"),
     createOrder
 );
+router.get("/order/balance", getCustomerOrdersWithBalance);
+
 router.put("/order/bulk-pay", bulkPayOrders);
 router.put("/order/:id",updateOrder);
 router.delete("/order/:id",deleteOrder);
