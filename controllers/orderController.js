@@ -624,7 +624,7 @@ const getCustomerOrdersWithBalance = async (req, res) => {
     // ------------------------------------
     const allCustomerOrders = await Order.find(query).lean();
 
-    const balances = allCustomerOrders.reduce(
+    const totals = allCustomerOrders.reduce(
       (acc, order) => {
         if (order.status === "cancelled") return acc;
 
@@ -668,7 +668,7 @@ const getCustomerOrdersWithBalance = async (req, res) => {
       limit,
       totalPages: Math.ceil(totalOrders / limit),
       totalOrders,
-      balances, // 👈 GLOBAL, NOT PAGINATED
+      totals, // 👈 GLOBAL, NOT PAGINATED
       data: orders
     });
 
