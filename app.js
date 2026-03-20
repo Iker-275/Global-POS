@@ -8,15 +8,19 @@ const connectDB = require("./db/connect")
 const {requireAuth,checkUser }= require("./middleware/authMiddleware")
 const allowRoles = require("./middleware/roleMiddleware")
 const { seedStatuses }= require("./seeders/statusSeeder")
+const cors = require("cors")
 
 const app = express();
 
 //app.use(bodyParser.urlencoded({extended: true}));
+app.use(cors());
+
  app.use(express.json());
 app.use(express.static("public"));
 app.use(cookieParser())
 app.use(checkUser);
 // app.use(allowRoles);
+
 
 app.set("view engine","ejs");
 const PORT = process.env.PORT || 5000;
