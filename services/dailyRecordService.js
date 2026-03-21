@@ -15,7 +15,7 @@ class DailyRecordService {
   // ---------------------------------------------------------
   // Open Daily Record (Only if none is open for today)
   // ---------------------------------------------------------
-  async openDailyRecord() {
+  async openDailyRecord2() {
     const today = moment().format("DD-MM-YYYY");
 
     // Check if already exists for today
@@ -49,6 +49,48 @@ class DailyRecordService {
     return { created: true, record };
   }
 
+  async openDailyRecord() {
+  const today = moment().format("DD-MM-YYYY");
+
+  // ✅ 1. CHECK IF ANY RECORD IS CURRENTLY OPEN
+  const activeRecord = await this.getActiveRecord();
+
+  if (activeRecord) {
+    return {
+      hasActive: true,
+      record: activeRecord
+    };
+  }
+
+  // ✅ 2. CHECK TODAY'S RECORD
+  const existing = await DailyRecord.findOne({ date: today });
+
+  if (existing && existing.closed === false) {
+    return { alreadyOpen: true, record: existing };
+  }
+
+  if (existing && existing.closed === true) {
+    throw new Error("Daily record already closed for today.");
+  }
+
+  // ✅ 3. CREATE NEW RECORD
+  const record = await DailyRecord.create({
+    date: today,
+    started: true,
+    closed: false,
+    isOpen: true,
+    time_started: moment().format("HH:mm:ss"),
+    weekOfYear: moment().week(),
+    month: moment().format("MMMM"),
+    year: moment().format("YYYY"),
+    totalSales: 0,
+    confirmedPayments: 0,
+    pendingPayments: 0,
+    orderIds: [],
+  });
+
+  return { created: true, record };
+}
   // ---------------------------------------------------------
   // Attach order to the daily record & update financials
   // ---------------------------------------------------------

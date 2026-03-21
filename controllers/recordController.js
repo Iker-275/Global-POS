@@ -1,6 +1,6 @@
 const dailyRecordService = require( "../services/dailyRecordService");
 
-const openDailyRecord = async (req, res) => {
+const openDailyRecord2 = async (req, res) => {
   try {
     const result = await dailyRecordService.openDailyRecord();
 
@@ -14,6 +14,35 @@ const openDailyRecord = async (req, res) => {
 
   } catch (error) {
     return res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+const openDailyRecord = async (req, res) => {
+  try {
+    const result = await dailyRecordService.openDailyRecord();
+
+    // 🚫 Another active record exists
+    if (result.hasActive) {
+      return res.status(400).json({
+        success: false,
+        message: "Another daily record is currently active. Please close it first.",
+        data: result.record
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: result.alreadyOpen 
+        ? "Daily record already open for today." 
+        : "Daily record opened successfully.",
+      data: result.record
+    });
+
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message
+    });
   }
 };
 
