@@ -9,6 +9,7 @@ const { getDailyRecordById, listDailyRecords } = require("../services/dailyRecor
 const { createStatus, updateStatus, deleteStatus, getAllStatuses, getStatusById, toggleVisibility } = require("../controllers/statusController")
 const {getAllUsers,getUserById,updateUser,toggleUserActive,deleteUser} = require("../controllers/user_controller");
 const {createRole,getAllRoles,getRoleById,updateRole,deleteRole} = require("../controllers/roleController");
+const{ createNotificationController,getNotifications,getNotificationById,markAsRead,deleteNotification, markAllAsRead, getUnreadNotificationCount} = require("../controllers/notificationController")  ;
 
 const {createExpense,updateExpense,deleteExpense,getExpense,getExpenses} = require("../controllers/expenseController");
 const {
@@ -104,6 +105,15 @@ router.post("/customer", createCustomer);
 router.get("/customer", getCustomers);
 router.get("/customer/:id", getCustomerById);
 router.put("/customer/:id", updateCustomer);
+
+//notifications
+router.post("/notification", createNotificationController);
+router.get("/notification", getNotifications);
+router.patch("/notification/all/read", markAllAsRead);
+router.get("/notification/unread", getUnreadNotificationCount);
+router.patch("/notification/:id/read", markAsRead);
+router.get("/notification/:id", getNotificationById);
+router.delete("/notification/:id", deleteNotification);
 
 module.exports = router;
 
