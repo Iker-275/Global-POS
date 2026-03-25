@@ -60,8 +60,12 @@ jobs:
        run: npm ci
 
 
-    #  - name: Run tests
-    #    run: npm test
+     - name: Run tests
+       run: npm test
+
+
+     - name: Lint code
+       run: npm run lint
 
      - name: Start server in background
        run: |
