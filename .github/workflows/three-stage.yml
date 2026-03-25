@@ -1,5 +1,9 @@
 name: 3-Stage CI/CD Pipeline
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+# env:
+#   ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
 
 on:
  push:
