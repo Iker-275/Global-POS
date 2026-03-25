@@ -12,7 +12,6 @@ const customerSchema = new mongoose.Schema(
     phone: {
       type: String,
       required: true,
-      unique: true,
       trim: true
     },
 
@@ -32,7 +31,7 @@ const customerSchema = new mongoose.Schema(
 );
 
 // Helpful index for fast lookup (POS search by phone)
-customerSchema.index({ phone: 1 });
+customerSchema.index({ phone: 1 }, { unique: true });
 customerSchema.index(
   { userId: 1 },
   {

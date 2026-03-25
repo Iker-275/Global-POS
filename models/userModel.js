@@ -7,7 +7,6 @@ const userSchema = new mongoose.Schema({
     email: {
         type: String,
         required: true,
-        unique: true,
         lowercase: true,
         validate: [isEmail, 'Please enter a valid email']
     },
@@ -18,7 +17,6 @@ const userSchema = new mongoose.Schema({
     },
     phone:{
         type: String,
-        unique:true,
         required:true
     },
     password: {
@@ -41,14 +39,7 @@ const userSchema = new mongoose.Schema({
 { timestamps: true }
 )
 
-// userSchema.pre('save', async function (next) {
-    
 
-//     const salt = await bcrypt.genSalt();
-//     this.password = await bcrypt.hash(this.password, salt);
-//    // console.log('user about to be created',this);
-//     next;
-// })
 
 userSchema.pre('save', async function (next) {
     if (!this.isModified('password')) return next;
@@ -58,23 +49,7 @@ userSchema.pre('save', async function (next) {
     next;
 });
 
-// userSchema.statics.login = async function(email, password) {
-//     const user = await this.findOne({ email });
 
-//     if (user) {
-//         //bcrypt checks for hashing automatically
-//         const auth = await bcrypt.compare(password, user.password)
-
-//         if (auth) {
-//             return user;
-//         }
-//         throw Error("Incorrect Password")
-//     }
-
-
-//     throw Error("Incorrect email")
-
-// }
 userSchema.statics.login = async function (identifier, password) {
   // Determine if identifier is email or phone
   const query = identifier.includes("@")
@@ -101,8 +76,8 @@ userSchema.statics.login = async function (identifier, password) {
   return user;
 };
 
-userSchema.index({ email: 1 });
-userSchema.index({ phone: 1 });
+userSchema.index({ email: 1 }, { unique: true });
+userSchema.index({ phone: 1 }, { unique: true });
 userSchema.index({ role: 1 });
 
 
