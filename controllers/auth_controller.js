@@ -4,11 +4,11 @@ const Customer = require("../models/customerModel");
 
 
 const handleErrors = (err) => {
-    // console.log("error" + err);
+     console.log("error" + err);
 
     let errors = { email: "", password: "" }
 
-    if (err.message === "User inactive") {
+    if (err.message === "User inactive" || err.message === "Account inactive" ) {
         errors.email =
             "Your account has been deactivated. Please contact an administrator.";
         return errors;
