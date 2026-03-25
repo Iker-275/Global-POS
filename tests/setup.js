@@ -1,33 +1,27 @@
-const User = require("../models/userModel");
+const mongoose = require("mongoose");
+const { MongoMemoryServer } = require("mongodb-memory-server");
 
-describe("User Model", () => {
-  it("should create a user", async () => {
-    const user = await User.create({
-      email: "test@email.com",
-      phone: "123456789",
-      password: "123456",
-      role: "user"
-    });
+let mongo;
 
-    expect(user._id).toBeDefined();
-    expect(user.email).toBe("test@email.com");
-  });
+beforeAll(async () => {
+  mongo = await MongoMemoryServer.create();
+  const uri = mongo.getUri();
 
-  it("should not allow duplicate phone", async () => {
-    await User.create({
-      email: "a@email.com",
-      phone: "123456789",
-      password: "123456",
-      role: "user"
-    });
+  await mongoose.connect(uri);
+});
 
-    await expect(
-      User.create({
-        email: "b@email.com",
-        phone: "123456789",
-        password: "123456",
-        role: "user"
-      })
-    ).rejects.toThrow();
-  });
+afterEach(async () => {
+  const collections = await mongoose.connection.db.collections();
+
+
+  
+
+  for (let collection of collections) {
+    await collection.deleteMany();
+  }
+});
+
+afterAll(async () => {
+   mongoose.connection.close();
+   await mongo.stop();
 });

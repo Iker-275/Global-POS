@@ -1,18 +1,14 @@
 const express = require("express");
-const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
 
 require("dotenv").config();
 const appRoutes = require("./routes/appRoutes")
 const connectDB = require("./db/connect")
 const {requireAuth,checkUser }= require("./middleware/authMiddleware")
-const allowRoles = require("./middleware/roleMiddleware")
 const { seedStatuses }= require("./seeders/statusSeeder")
 const cors = require("cors")
 
 const app = express();
-
-//app.use(bodyParser.urlencoded({extended: true}));
 app.use(cors());
 
  app.use(express.json());

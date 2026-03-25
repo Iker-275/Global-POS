@@ -1,5 +1,5 @@
 // tests/user.test.js
-const User = require("../models/user");
+const User = require("../models/userModel");
 
 test("should fail if user not found", async () => {
   await expect(
