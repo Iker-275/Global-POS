@@ -842,7 +842,7 @@ const getOrdersHome = async (req, res) => {
     // BASIC FILTERS
     // -----------------------------
     if (status) query.status = status;
-    if (customer) query.customer_name = customer;
+    // if (customer) query.customer_name = customer;
     if (customer) query.customer_phone = customer;
 
 
