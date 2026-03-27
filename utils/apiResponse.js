@@ -1,6 +1,6 @@
 
 // utils/apiResponse.js
-export const apiResponse = ({
+  const apiResponse = ({
   res,
   success = true,
   message = "",
@@ -15,3 +15,5 @@ export const apiResponse = ({
     pagination
   });
 };
+
+module.exports={apiResponse}

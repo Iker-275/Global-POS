@@ -549,7 +549,7 @@ const getOrders = async (req, res) => {
     // FILTERS
     // -----------------------------
     if (status) query.status = status;
-    if (customer) query.customer_name = customer;
+    if (customer) query.customer_phone = customer;
 
     // -----------------------------
     // DATE FILTERS

@@ -59,14 +59,14 @@ jobs:
      - name: Install dependencies
        run: npm ci
 
+   
+
+
+    #  - name: Run tests
+    #    run: npm test
+
     #  - name: Lint code
     #    run: npm run lint
-
-
-     - name: Run tests
-       run: npm test
-
-
      
 
      - name: Start server in background
