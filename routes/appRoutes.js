@@ -21,6 +21,11 @@ const {
 } = require("../controllers/customerController");
 const router = Router();
 
+
+
+const { getDashboard } = require("../controllers/dashboard_controller");
+
+router.get("/dashboard", getDashboard);
 //auth routes
 router.get("/signup", signUp_get);
 router.post("/signup", signUp_post);
