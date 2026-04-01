@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const User = require("../models/userModel.js");
 const OrderStatus = require("../models/orderStatus.js");
 const Order = require ("../models/orderModel.js")
+const PDFDocument = require("pdfkit");
 const dailyRecordService = require("../services/dailyRecordService.js")
 const dayjs = require( "dayjs");
 const weekOfYear = require( "dayjs/plugin/weekOfYear.js");
@@ -28,79 +29,6 @@ dayjs.extend(weekOfYear);
   return Math.abs(value) < 0.005 ? 0 : value;
 };
 
-
-// const createOrder = async (req, res) => {
-//   try {
-//     const {
-//       dishesOrdered,
-//       orderTotal,
-//       customer_phone,
-//       customer_name,
-//       status = "pending",
-//       created_at
-//     } = req.body;
-
-//     // 1. Check active daily record
-//     const dailyRecord = await dailyRecordService.getActiveRecord();
-
-//     if (!dailyRecord) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Cannot create order. Daily Record is not opened."
-//       });
-//     }
-
-//     if (dailyRecord.closed) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Daily Record is closed. No orders allowed."
-//       });
-//     }
-
-//     // 2. Derive date fields (SOURCE OF TRUTH)
-//     const recordDate = dayjs(dailyRecord.date, "DD-MM-YYYY");
-
-//     const order = await Order.create({
-//       dailyRecordId: dailyRecord._id,
-//       dailyRecordDate: dailyRecord.date,
-
-//       weekOfYear: dailyRecord.weekOfYear ?? recordDate.week(),
-//       month: dailyRecord.month ?? recordDate.format("MMMM"),
-//       year: dailyRecord.year ?? recordDate.format("YYYY"),
-
-//       user_id: req.user?.id || req.body.user_id,
-
-//       dishesOrdered: dishesOrdered || [],
-//       orderTotal,
-
-//       status,
-//       paymentStatus: "unpaid",
-//       paidAmount: 0,
-//       balance: orderTotal,
-
-//       customer_phone: customer_phone || "",
-//       customer_name: customer_name || "",
-
-//       created_at: created_at || new Date().toISOString()
-//     });
-
-//     // 3. Attach + recalc
-//     await dailyRecordService.attachOrderToRecord(order);
-//     await dailyRecordService.recalcTotalsForRecord(dailyRecord._id);
-
-//     return res.status(201).json({
-//       success: true,
-//       message: "Order created successfully",
-//       data: order
-//     });
-
-//   } catch (error) {
-//     return res.status(500).json({
-//       success: false,
-//       message: error.message
-//     });
-//   }
-// };
 
 
 const createOrder = async (req, res) => {
@@ -195,81 +123,7 @@ const createOrder = async (req, res) => {
 
 
 
-const updateOrder2 = async (req, res) => {
-  try {
-    const { id } = req.params;
 
-    const existing = await Order.findOne({ orderId: id });
-    if (!existing) {
-      return res.status(404).json({
-        success: false,
-        message: "Order not found"
-      });
-    }
-
-    const paid = req.body.paidAmount !== undefined
-      ? roundMoney(req.body.paidAmount)
-      : roundMoney(existing.paidAmount);
-
-    const total = roundMoney(existing.orderTotal);
-
-    let paymentStatus = "unpaid";
-    let partially_paid = false;
-    let fully_paid = false;
-    let balance = total;
-
-    if (paid <= 0) {
-      balance = total;
-    } 
-    else if (paid < total) {
-      paymentStatus = "partial";
-      partially_paid = true;
-      balance = roundMoney(total - paid);
-    } 
-    else {
-      paymentStatus = "paid";
-      fully_paid = true;
-      balance = 0;
-    }
-
-    balance = normalizeZero(balance);
-
-     let status = req.body.status || existing.status;
-    if (paymentStatus === "paid") {
-      status = "paid"; // automatically mark order as paid
-    }
-
-    const updateData = {
-      ...req.body,
-      paidAmount: paid,
-      paymentStatus,
-      partially_paid,
-      fully_paid,
-      balance,
-      status
-    };
-
-    const updated = await Order.findOneAndUpdate(
-      { orderId: id },
-      updateData,
-      { new: true }
-    );
-
-    await dailyRecordService.recalcTotalsForRecord(existing.dailyRecordId);
-
-    return res.json({
-      success: true,
-      message: "Order updated successfully",
-      data: updated
-    });
-
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-};
 
 const updateOrder = async (req, res) => {
   try {
@@ -770,6 +624,217 @@ const getOrders = async (req, res) => {
   }
 };
 
+
+
+const generateOrdersReportPDF = async (req, res) => {
+  try {
+    let {
+      status,
+      customer,
+      user_id,
+      date,
+      startDate,
+      endDate,
+      month,
+      year,
+      week
+    } = req.query;
+
+    const query = {};
+
+    // -----------------------------
+    // FILTERS
+    // -----------------------------
+    if (status) query.status = status;
+    if (customer) query.customer_phone = customer;
+    if (user_id) query.user_id = user_id;
+
+    // -----------------------------
+    // DATE FILTERS
+    // -----------------------------
+    if (date) {
+      const [day, m, y] = date.split("-");
+      query.createdAt = {
+        $gte: new Date(`${y}-${m}-${day}T00:00:00.000Z`),
+        $lte: new Date(`${y}-${m}-${day}T23:59:59.999Z`)
+      };
+    }
+
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate);
+      if (endDate) query.createdAt.$lte = new Date(endDate);
+    }
+
+    if (year) {
+      query.createdAt = {
+        ...query.createdAt,
+        $gte: new Date(`${year}-01-01`),
+        $lte: new Date(`${year}-12-31`)
+      };
+    }
+
+    if (month) {
+      const monthIndex = isNaN(month)
+        ? new Date(`${month} 1, ${year || new Date().getFullYear()}`).getMonth()
+        : Number(month) - 1;
+
+      const y = year || new Date().getFullYear();
+
+      query.createdAt = {
+        $gte: new Date(y, monthIndex, 1),
+        $lte: new Date(y, monthIndex + 1, 0, 23, 59, 59)
+      };
+    }
+
+    if (week && year) {
+      const firstDay = new Date(year, 0, 1);
+      const startOfWeek = new Date(
+        firstDay.setDate(firstDay.getDate() + (week - 1) * 7)
+      );
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(endOfWeek.getDate() + 6);
+
+      query.createdAt = {
+        $gte: startOfWeek,
+        $lte: endOfWeek
+      };
+    }
+
+    // -----------------------------
+    // FETCH DATA (NO PAGINATION)
+    // -----------------------------
+    const orders = await Order.find(query)
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // -----------------------------
+    // TOTALS (GLOBAL)
+    // -----------------------------
+    const totalsAgg = await Order.aggregate([
+      { $match: query },
+      { $match: { status: { $ne: "cancelled" } } },
+      {
+        $group: {
+          _id: null,
+          totalSales: { $sum: "$orderTotal" },
+          confirmedPayments: { $sum: "$paidAmount" },
+          pendingPayments: { $sum: "$balance" }
+        }
+      }
+    ]);
+
+    const totals = totalsAgg[0] || {
+      totalSales: 0,
+      confirmedPayments: 0,
+      pendingPayments: 0
+    };
+
+    // -----------------------------
+    // PDF SETUP
+    // -----------------------------
+    const doc = new PDFDocument({
+      margin: 30,
+      size: "A4",
+      layout: "landscape"
+    });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=orders-report.pdf`
+    );
+
+    doc.pipe(res);
+
+    // -----------------------------
+    // HEADER
+    // -----------------------------
+    doc.fontSize(18).text("ORDER REPORT", { align: "center" });
+    doc.moveDown();
+
+    doc.fontSize(10);
+    if (status) doc.text(`Status: ${status}`);
+    if (customer) doc.text(`Customer: ${customer}`);
+    if (user_id) doc.text(`User: ${user_id}`);
+    doc.text(`Generated: ${new Date().toLocaleString()}`);
+
+    doc.moveDown();
+
+    doc.text(`Total Orders: ${orders.length}`);
+    doc.text(`Total Sales: ${totals.totalSales.toFixed(2)} USD`);
+    doc.text(`Paid: ${totals.confirmedPayments.toFixed(2)} USD`);
+    doc.text(`Unpaid: ${totals.pendingPayments.toFixed(2)} USD`);
+
+    doc.moveDown();
+
+    // -----------------------------
+    // TABLE HEADER
+    // -----------------------------
+    const tableTop = doc.y + 10;
+    const rowHeight = 20;
+
+    const headers = [
+      "Order ID",
+      "Customer",
+      "Phone",
+      "Total",
+      "Paid",
+      "Balance",
+      "Status",
+      "Date"
+    ];
+
+    const colX = [30, 90, 200, 300, 370, 440, 510, 590];
+
+    headers.forEach((h, i) => {
+      doc.font("Helvetica-Bold").text(h, colX[i], tableTop);
+    });
+
+    let y = tableTop + 20;
+
+    // -----------------------------
+    // TABLE ROWS
+    // -----------------------------
+    orders.forEach((o) => {
+      doc.font("Helvetica");
+
+      doc.text(o.orderId, colX[0], y);
+      doc.text(o.customer_name || "-", colX[1], y);
+      doc.text(o.customer_phone || "-", colX[2], y);
+      doc.text((o.orderTotal || 0).toFixed(2), colX[3], y);
+      doc.text((o.paidAmount || 0).toFixed(2), colX[4], y);
+      doc.text((o.balance || 0).toFixed(2), colX[5], y);
+      doc.text(o.status, colX[6], y);
+      doc.text(new Date(o.createdAt).toLocaleDateString(), colX[7], y);
+
+      y += rowHeight;
+
+      if (y > 520) {
+        doc.addPage();
+        y = 50;
+      }
+    });
+
+    // -----------------------------
+    // FOOTER TOTAL
+    // -----------------------------
+    doc.moveDown(2);
+    doc.text(
+      `TOTAL SALES: ${totals.totalSales.toFixed(2)} USD | PAID: ${totals.confirmedPayments.toFixed(
+        2
+      )} | UNPAID: ${totals.pendingPayments.toFixed(2)}`
+    );
+
+    doc.end();
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 const getCustomerOrdersWithBalance = async (req, res) => {
   try {
     let {
@@ -1220,4 +1285,6 @@ const getOrderById = async (req, res) => {
 };
 
 
-module.exports = { cancelOrder,getOrderById,getOrdersByDate,getOrders,deleteOrder,updateOrder,createOrder,getOrdersHome,getOrdersReport,bulkPayOrders,getCustomerOrdersWithBalance };
+module.exports = { cancelOrder,getOrderById,getOrdersByDate,getOrders,deleteOrder,updateOrder,
+  createOrder,getOrdersHome,getOrdersReport,bulkPayOrders,getCustomerOrdersWithBalance,
+generateOrdersReportPDF };

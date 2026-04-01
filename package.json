@@ -8,7 +8,9 @@
     "lint": "eslint ."
   },
   "jest": {
-    "setupFilesAfterEnv": ["<rootDir>/tests/setup.js"],
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/setup.js"
+    ],
     "testEnvironment": "node"
   },
   "author": "Anderson",
@@ -26,6 +28,7 @@
     "jsonwebtoken": "^9.0.2",
     "moment": "^2.30.1",
     "mongoose": "^9.0.0",
+    "pdfkit": "^0.18.0",
     "validator": "^13.15.23"
   },
   "devDependencies": {
