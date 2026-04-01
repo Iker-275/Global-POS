@@ -640,6 +640,7 @@ const getOrders = async (req, res) => {
       limit = 20,
       status,
       customer,
+      user_id, 
       date,
       startDate,
       endDate,
@@ -658,6 +659,7 @@ const getOrders = async (req, res) => {
     // -----------------------------
     if (status) query.status = status;
     if (customer) query.customer_phone = customer;
+    if (user_id) query.user_id = user_id;
 
     // -----------------------------
     // DATE FILTERS
@@ -709,9 +711,7 @@ const getOrders = async (req, res) => {
       };
     }
 
-    // -----------------------------
-    // GLOBAL TOTALS (AGGREGATION)
-    // -----------------------------
+    
     const totalsAgg = await Order.aggregate([
       { $match: query },
       {
